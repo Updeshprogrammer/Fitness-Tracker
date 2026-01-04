@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Download, TrendingUp } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 export default function AnalysisPage() {
   const [analysis, setAnalysis] = useState(null);
@@ -31,46 +32,86 @@ export default function AnalysisPage() {
     try {
       const res = await fetch('/api/reports?type=analysis');
       const data = await res.json();
-
+  
       const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text('Analysis Report', 14, 22);
-      doc.setFontSize(12);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-      doc.text(`User: ${data.user.name}`, 14, 36);
-
-      let yPos = 50;
-
-      // Diet Statistics
+  
+      /* ---------------- LOGO ---------------- */
+      const logoImg = new Image();
+      logoImg.src = '/logo.webp';
+  
+      await new Promise(resolve => {
+        logoImg.onload = resolve;
+      });
+  
+      doc.addImage(logoImg, 'WEBP', 14, 10, 30, 30);
+  
+      /* ---------------- HEADER ---------------- */
+      doc.setFontSize(20);
+      doc.text('Fitness Tracker App', 50, 20);
+  
+      doc.setFontSize(14);
+      doc.text('Analysis Report', 50, 28);
+  
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 50, 34);
+  
+      doc.text(`Name: ${data.user.name}`, 14, 48);
+      doc.text(`Email: ${data.user.email}`, 14, 54);
+  
+      let yPos = 65;
+  
+      /* ---------------- DIET STATISTICS ---------------- */
       doc.setFontSize(14);
       doc.text('Diet Statistics', 14, yPos);
       yPos += 10;
+  
       doc.setFontSize(10);
       doc.text(`Total Plans: ${data.analysis.diet.totalPlans}`, 14, yPos);
       yPos += 6;
-      doc.text(`Completed Days: ${data.analysis.diet.completedDays}/${data.analysis.diet.totalDays}`, 14, yPos);
+  
+      doc.text(
+        `Completed Days: ${data.analysis.diet.completedDays}/${data.analysis.diet.totalDays}`,
+        14,
+        yPos
+      );
       yPos += 6;
-      doc.text(`Total Calories: ${data.analysis.diet.totalCalories}`, 14, yPos);
+  
+      doc.text(
+        `Total Calories: ${data.analysis.diet.totalCalories}`,
+        14,
+        yPos
+      );
       yPos += 15;
-
-      // Workout Statistics
+  
+      /* ---------------- WORKOUT STATISTICS ---------------- */
       doc.setFontSize(14);
       doc.text('Workout Statistics', 14, yPos);
       yPos += 10;
+  
       doc.setFontSize(10);
       doc.text(`Total Plans: ${data.analysis.workout.totalPlans}`, 14, yPos);
       yPos += 6;
-      doc.text(`Completed Days: ${data.analysis.workout.completedDays}/${data.analysis.workout.totalDays}`, 14, yPos);
+  
+      doc.text(
+        `Completed Days: ${data.analysis.workout.completedDays}/${data.analysis.workout.totalDays}`,
+        14,
+        yPos
+      );
       yPos += 6;
-      doc.text(`Completed Exercises: ${data.analysis.workout.completedExercises}/${data.analysis.workout.totalExercises}`, 14, yPos);
+  
+      doc.text(
+        `Completed Exercises: ${data.analysis.workout.completedExercises}/${data.analysis.workout.totalExercises}`,
+        14,
+        yPos
+      );
       yPos += 15;
-
-      // BMI Records
-      if (data.analysis.bmiRecords.length > 0) {
+  
+      /* ---------------- BMI HISTORY ---------------- */
+      if (data.analysis.bmiRecords?.length > 0) {
         doc.setFontSize(14);
         doc.text('BMI History', 14, yPos);
-        yPos += 10;
-
+        yPos += 8;
+  
         const bmiData = data.analysis.bmiRecords.map(r => [
           new Date(r.date).toLocaleDateString(),
           r.height,
@@ -78,20 +119,46 @@ export default function AnalysisPage() {
           r.bmi,
           r.category,
         ]);
-
-        doc.autoTable({
+  
+        autoTable(doc, {
           startY: yPos,
           head: [['Date', 'Height (cm)', 'Weight (kg)', 'BMI', 'Category']],
           body: bmiData,
           theme: 'striped',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [79, 70, 229] }, // Indigo
         });
       }
-
+  
+      /* ---------------- FOOTER ---------------- */
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9);
+        doc.text(
+          'Fitness Tracker App • Complete Health Analytics',
+          14,
+          290
+        );
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          190,
+          290,
+          { align: 'right' }
+        );
+      }
+  
       doc.save(`analysis-report-${Date.now()}.pdf`);
+      toast.success('Analysis report downloaded successfully!');
     } catch (error) {
       console.error('Error downloading report:', error);
+      toast.error('Failed to download analysis report');
     }
   };
+  
+  
+  
+  
 
   if (loading) {
     return <div className="p-6">Loading...</div>;

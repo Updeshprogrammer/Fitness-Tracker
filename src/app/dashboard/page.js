@@ -71,66 +71,66 @@ export default function DashboardPage() {
   return (
     <div className="px-4 py-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Welcome back, {session?.user?.name}!
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          Welcome back, {session?.user?.name}! 👋
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-lg text-gray-600 dark:text-gray-400">
           Track your fitness journey and achieve your goals
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Diet Plans</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                 {stats.dietPlans}
               </p>
             </div>
-            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+            <div className="p-4 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-xl">
               <UtensilsCrossed className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Workout Plans</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                 {stats.workoutPlans}
               </p>
             </div>
-            <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+            <div className="p-4 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-xl">
               <Dumbbell className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Diet Days Completed</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                 {stats.completedDietDays}
               </p>
             </div>
-            <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
+            <div className="p-4 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 rounded-xl">
               <Target className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Workout Days Completed</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                 {stats.completedWorkoutDays}
               </p>
             </div>
-            <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-full">
+            <div className="p-4 bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800 rounded-xl">
               <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
@@ -138,14 +138,26 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Link href="/dashboard/diet" className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Manage Diet Plans</h2>
-          <p className="text-gray-600 dark:text-gray-400">Create and track your daily diet plans</p>
+        <Link href="/dashboard/diet" className="group bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-2 p-8 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-lg group-hover:scale-110 transition-transform">
+              <UtensilsCrossed className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Diet Plans</h2>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Create and track your daily diet plans with meal tracking</p>
+          <span className="text-indigo-600 dark:text-indigo-400 font-medium group-hover:underline">Get started →</span>
         </Link>
 
-        <Link href="/dashboard/workout" className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Manage Workout Plans</h2>
-          <p className="text-gray-600 dark:text-gray-400">Create and track your workout routines</p>
+        <Link href="/dashboard/workout" className="group bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-2 p-8 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 rounded-lg group-hover:scale-110 transition-transform">
+              <Dumbbell className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Workout Plans</h2>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Create and track your workout routines with exercise tracking</p>
+          <span className="text-indigo-600 dark:text-indigo-400 font-medium group-hover:underline">Get started →</span>
         </Link>
       </div>
     </div>

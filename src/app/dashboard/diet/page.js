@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Calendar, Download, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -177,52 +177,112 @@ export default function DietPage() {
     try {
       const res = await fetch('/api/reports?type=diet');
       const data = await res.json();
-
+  
       const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text('Diet Plan Report', 14, 22);
-      doc.setFontSize(12);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-      doc.text(`User: ${data.user.name}`, 14, 36);
-
-      let yPos = 50;
+  
+      /* ---------------- LOGO ---------------- */
+      const logoUrl = '/logo.webp';
+      const logoImg = new Image();
+      logoImg.src = logoUrl;
+  
+      await new Promise(resolve => {
+        logoImg.onload = resolve;
+      });
+  
+      doc.addImage(logoImg, 'WEBP', 14, 10, 30, 30);
+  
+      /* ---------------- HEADER ---------------- */
+      doc.setFontSize(20);
+      doc.text('Fitness Tracker App', 50, 20);
+  
+      doc.setFontSize(14);
+      doc.text('Diet Plan Report', 50, 28);
+  
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 50, 34);
+  
+      doc.text(`Name: ${data.user.name}`, 14, 48);
+      doc.text(`Email: ${data.user.email}`, 14, 54);
+  
+      let yPos = 65;
+  
+      /* ---------------- PLANS ---------------- */
       data.dietPlans.forEach((plan, index) => {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-
+  
         doc.setFontSize(14);
         doc.text(`${index + 1}. ${plan.name}`, 14, yPos);
         yPos += 8;
+  
         doc.setFontSize(10);
-        doc.text(`Period: ${format(new Date(plan.startDate), 'MMM dd, yyyy')} - ${format(new Date(plan.endDate), 'MMM dd, yyyy')}`, 14, yPos);
+        doc.text(
+          `Period: ${format(new Date(plan.startDate), 'MMM dd, yyyy')} - ${format(
+            new Date(plan.endDate),
+            'MMM dd, yyyy'
+          )}`,
+          14,
+          yPos
+        );
         yPos += 6;
-        doc.text(`Completed: ${plan.completedDays}/${plan.totalDays} days`, 14, yPos);
+  
+        doc.text(
+          `Completed: ${plan.completedDays}/${plan.totalDays} days`,
+          14,
+          yPos
+        );
         yPos += 10;
-
+  
         const tableData = plan.days.map(day => [
           format(new Date(day.date), 'MMM dd, yyyy'),
           day.completed ? 'Yes' : 'No',
           day.totalCalories || 0,
-          day.meals.length,
+          day.meals?.length || 0,
         ]);
-
-        doc.autoTable({
+  
+        autoTable(doc, {
           startY: yPos,
           head: [['Date', 'Completed', 'Calories', 'Meals']],
           body: tableData,
           theme: 'striped',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [79, 70, 229] }, // Indigo
         });
-
-        yPos = doc.lastAutoTable.finalY + 15;
+  
+        yPos = doc.lastAutoTable?.finalY
+          ? doc.lastAutoTable.finalY + 15
+          : yPos + 30;
       });
-
+  
+      /* ---------------- FOOTER ---------------- */
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9);
+        doc.text(
+          'Fitness Tracker App • Stay Fit, Stay Healthy',
+          14,
+          290
+        );
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          180,
+          290,
+          { align: 'right' }
+        );
+      }
+  
       doc.save(`diet-report-${Date.now()}.pdf`);
+      toast.success('Diet report downloaded successfully!');
     } catch (error) {
       console.error('Error downloading report:', error);
+      toast.error('Failed to download diet report');
     }
   };
+  
+  
 
   const currentPlan = dietPlans.find(p => p._id === selectedPlan);
   const dateStr = currentDate.toDateString();
