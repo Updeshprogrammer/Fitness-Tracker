@@ -305,40 +305,47 @@ export default function DietPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Diet Plans</h1>
-        <div className="flex gap-2">
+    <div className="min-h-screen p-4 sm:p-6 bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col sm:flex-row sm:justify-between gap-3 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          Diet Plans
+        </h1>
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleDownloadReport}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+              bg-green-600 hover:bg-green-700 text-white"
           >
-            <Download className="w-4 h-4" />
+            <Download size={16} />
             Download Report
           </button>
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+              bg-indigo-600 hover:bg-indigo-700 text-white"
           >
-            <Plus className="w-4 h-4" />
+            <Plus size={16} />
             New Plan
           </button>
         </div>
       </div>
 
       {dietPlans.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">No diet plans yet</p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Create Your First Plan
-          </button>
-        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center">
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          No diet plans yet
+        </p>
+        <button
+          onClick={() => setShowModal(true)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        >
+          Create Your First Plan
+        </button>
+      </div>
       ) : (
         <>
-          <div className="mb-4 flex gap-2">
+          {/* CONTROLS */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <select
               value={selectedPlan || ''}
               onChange={(e) => setSelectedPlan(e.target.value)}
@@ -348,45 +355,44 @@ export default function DietPage() {
                 <option key={plan._id} value={plan._id}>{plan.name}</option>
               ))}
             </select>
-            <div className="flex gap-2">
+            <div className="flex w-full sm:w-auto gap-2">
+            {['day', 'week', 'month'].map(mode => (
               <button
-                onClick={() => setViewMode('day')}
-                className={`px-4 py-2 rounded-lg ${viewMode === 'day' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`flex-1 px-4 py-2 rounded-lg capitalize
+                  ${viewMode === mode
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
               >
-                Day
+                {mode}
               </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`px-4 py-2 rounded-lg ${viewMode === 'week' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-              >
-                Week
-              </button>
-              <button
-                onClick={() => setViewMode('month')}
-                className={`px-4 py-2 rounded-lg ${viewMode === 'month' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-              >
-                Month
-              </button>
-            </div>
+            ))}
+          </div>
+
             <button
-              onClick={() => handleDeletePlan(selectedPlan)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
+            onClick={() => {
+              setPlanToDelete(selectedPlan);
+              setShowDeleteConfirm(true);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+              bg-red-600 hover:bg-red-700 text-white"
+          >
+            <Trash2 size={16} /> Delete
+          </button>
           </div>
 
           {currentPlan && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="mb-4 flex justify-between items-center">
+              <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{currentPlan.name}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{currentPlan.name}</h2>
                   <p className="text-gray-600 dark:text-gray-400">{currentPlan.description}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Daily Goal</p>
-                  <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Daily Goal</p>
+                  <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
                     {currentPlan.dailyCalorieGoal} cal
                   </p>
                 </div>
@@ -604,4 +610,3 @@ export default function DietPage() {
     </div>
   );
 }
-
