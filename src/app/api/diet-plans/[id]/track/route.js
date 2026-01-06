@@ -13,7 +13,11 @@ export async function PUT(request, { params }) {
 
     await connectDB();
     const { date, mealIndex, completed } = await request.json();
-    
+
+    if (!date) {
+      return NextResponse.json({ error: 'Date is required' }, { status: 400 });
+    }
+
     const dietPlan = await DietPlan.findOne({
       _id: params.id,
       userId: session.user.id,
@@ -23,12 +27,22 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Diet plan not found' }, { status: 404 });
     }
 
-    const dateStr = new Date(date).toDateString();
+    // Ensure days is always an array to avoid runtime errors on legacy data
+    if (!Array.isArray(dietPlan.days)) {
+      dietPlan.days = [];
+    }
+
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+    }
+
+    const dateStr = targetDate.toDateString();
     let day = dietPlan.days.find(d => new Date(d.date).toDateString() === dateStr);
 
     if (!day) {
       day = {
-        date: new Date(date),
+        date: targetDate,
         meals: [],
         completed: false,
         totalCalories: 0,
@@ -37,12 +51,15 @@ export async function PUT(request, { params }) {
     }
 
     if (mealIndex !== undefined) {
-      if (!day.meals[mealIndex]) {
+      // Normalise index to integer and validate bounds
+      const idx = Number(mealIndex);
+      if (!Array.isArray(day.meals) || idx < 0 || !Number.isInteger(idx) || idx >= day.meals.length) {
         return NextResponse.json({ error: 'Meal not found' }, { status: 404 });
       }
-      day.meals[mealIndex].completed = completed;
-      
-      const allMealsCompleted = day.meals.every(m => m.completed);
+
+      day.meals[idx].completed = completed;
+
+      const allMealsCompleted = day.meals.length > 0 && day.meals.every(m => m.completed);
       day.completed = allMealsCompleted;
     } else {
       day.completed = completed;

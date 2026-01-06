@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Download, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Download, Trash2, CheckCircle2, Circle, Copy, Edit, X } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -17,6 +17,8 @@ export default function WorkoutPage() {
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [planToDelete, setPlanToDelete] = useState(null);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [editingExercise, setEditingExercise] = useState(null); // { planId, date, exerciseIndex }
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -46,6 +48,30 @@ export default function WorkoutPage() {
   const handleCreatePlan = async (e) => {
     e.preventDefault();
     try {
+      if (editingPlan) {
+        // Update existing plan
+        const res = await fetch(`/api/workout-plans/${editingPlan}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        if (res.ok) {
+          await fetchWorkoutPlans();
+          setShowModal(false);
+          setEditingPlan(null);
+          setFormData({
+            name: '',
+            description: '',
+            startDate: format(new Date(), 'yyyy-MM-dd'),
+            endDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+          });
+          toast.success('Workout plan updated successfully!');
+        } else {
+          toast.error('Failed to update workout plan');
+        }
+      } else {
+        // Create new plan
       const res = await fetch('/api/workout-plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,9 +90,108 @@ export default function WorkoutPage() {
         toast.success('Workout plan created successfully!');
       } else {
         toast.error('Failed to create workout plan');
+        }
       }
     } catch (error) {
-      console.error('Error creating workout plan:', error);
+      console.error('Error saving workout plan:', error);
+      toast.error('Error saving workout plan');
+    }
+  };
+
+  const handleEditPlan = (plan) => {
+    setEditingPlan(plan._id);
+    setFormData({
+      name: plan.name,
+      description: plan.description || '',
+      startDate: format(new Date(plan.startDate), 'yyyy-MM-dd'),
+      endDate: format(new Date(plan.endDate), 'yyyy-MM-dd'),
+    });
+    setShowModal(true);
+  };
+
+  const handleDuplicateToTomorrow = async () => {
+    if (!selectedPlan) {
+      toast.error('Please select a plan first');
+      return;
+    }
+
+    try {
+      const plan = workoutPlans.find(p => p._id === selectedPlan);
+      if (!plan) {
+        toast.error('Plan not found');
+        return;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayDay = plan.days.find(d => {
+        const dayDate = new Date(d.date);
+        dayDate.setHours(0, 0, 0, 0);
+        return dayDate.getTime() === today.getTime();
+      });
+
+      if (!todayDay || !todayDay.exercises || todayDay.exercises.length === 0) {
+        toast.error('No exercises found for today to duplicate');
+        return;
+      }
+
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Check if tomorrow already exists
+      const tomorrowDateStr = tomorrow.toDateString();
+      const existingTomorrow = plan.days.find(d => {
+        const dayDate = new Date(d.date);
+        dayDate.setHours(0, 0, 0, 0);
+        return dayDate.toDateString() === tomorrowDateStr;
+      });
+
+      // Create duplicated exercises with completed status reset
+      const duplicatedExercises = todayDay.exercises.map(exercise => {
+        const { _id, ...exerciseWithoutId } = exercise;
+        return {
+          ...exerciseWithoutId,
+          completed: false,
+        };
+      });
+
+      const newDay = {
+        date: tomorrow,
+        exercises: duplicatedExercises,
+        completed: false,
+      };
+
+      let updatedDays;
+      if (existingTomorrow) {
+        // Replace existing tomorrow's exercises
+        updatedDays = plan.days.map(d => {
+          const dayDate = new Date(d.date);
+          dayDate.setHours(0, 0, 0, 0);
+          if (dayDate.toDateString() === tomorrowDateStr) {
+            return newDay;
+          }
+          return d;
+        });
+      } else {
+        // Add new day
+        updatedDays = [...plan.days, newDay];
+      }
+
+      const res = await fetch(`/api/workout-plans/${selectedPlan}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: updatedDays }),
+      });
+
+      if (res.ok) {
+        await fetchWorkoutPlans();
+        toast.success('Today\'s plan duplicated to tomorrow!');
+      } else {
+        toast.error('Failed to duplicate plan');
+      }
+    } catch (error) {
+      console.error('Error duplicating plan:', error);
+      toast.error('Error duplicating plan');
     }
   };
 
@@ -164,9 +289,115 @@ export default function WorkoutPage() {
 
       if (res.ok) {
         await fetchWorkoutPlans();
+        toast.success('Exercise added successfully!');
       }
     } catch (error) {
       console.error('Error adding exercise:', error);
+      toast.error('Error adding exercise');
+    }
+  };
+
+  const handleUpdateExercise = async (planId, date, exerciseIndex, name, sets, reps, duration) => {
+    try {
+      const plan = workoutPlans.find(p => p._id === planId);
+      if (!plan) return;
+
+      const dateStr = new Date(date).toDateString();
+      const existingDay = plan.days.find(d => new Date(d.date).toDateString() === dateStr);
+
+      if (!existingDay || !existingDay.exercises[exerciseIndex]) {
+        toast.error('Exercise not found');
+        return;
+      }
+
+      if (!name.trim()) {
+        toast.error('Exercise name cannot be empty');
+        setEditingExercise(null);
+        return;
+      }
+
+      const updatedDays = plan.days.map(d => {
+        if (new Date(d.date).toDateString() === dateStr) {
+          const updatedExercises = d.exercises.map((exercise, index) => {
+            if (index === exerciseIndex) {
+              return {
+                ...exercise,
+                name: name.trim(),
+                sets: parseInt(sets) || 0,
+                reps: parseInt(reps) || 0,
+                duration: parseInt(duration) || 0,
+              };
+            }
+            return exercise;
+          });
+
+          return {
+            ...d,
+            exercises: updatedExercises,
+          };
+        }
+        return d;
+      });
+
+      const res = await fetch(`/api/workout-plans/${planId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: updatedDays }),
+      });
+
+      if (res.ok) {
+        await fetchWorkoutPlans();
+        setEditingExercise(null);
+        toast.success('Exercise updated successfully!');
+      } else {
+        toast.error('Failed to update exercise');
+      }
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+      toast.error('Error updating exercise');
+    }
+  };
+
+  const handleDeleteExercise = async (planId, date, exerciseIndex) => {
+    try {
+      const plan = workoutPlans.find(p => p._id === planId);
+      if (!plan) return;
+
+      const dateStr = new Date(date).toDateString();
+      const existingDay = plan.days.find(d => new Date(d.date).toDateString() === dateStr);
+
+      if (!existingDay || !existingDay.exercises[exerciseIndex]) {
+        toast.error('Exercise not found');
+        return;
+      }
+
+      const updatedDays = plan.days.map(d => {
+        if (new Date(d.date).toDateString() === dateStr) {
+          const updatedExercises = d.exercises.filter((_, index) => index !== exerciseIndex);
+          
+          return {
+            ...d,
+            exercises: updatedExercises,
+          };
+        }
+        return d;
+      });
+
+      const res = await fetch(`/api/workout-plans/${planId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: updatedDays }),
+      });
+
+      if (res.ok) {
+        await fetchWorkoutPlans();
+        toast.success('Exercise deleted successfully!');
+      } else {
+        toast.error('Failed to delete exercise');
+      }
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      toast.error('Error deleting exercise');
     }
   };
 
@@ -316,7 +547,16 @@ export default function WorkoutPage() {
             Download Report
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setEditingPlan(null);
+              setFormData({
+                name: '',
+                description: '',
+                startDate: format(new Date(), 'yyyy-MM-dd'),
+                endDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+              });
+              setShowModal(true);
+            }}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg
               bg-indigo-600 hover:bg-indigo-700 text-white"
           >
@@ -385,9 +625,30 @@ export default function WorkoutPage() {
 {/* PLAN CARD */}
           {currentPlan && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="mb-4">
+              <div className="mb-4 flex flex-col sm:flex-row justify-between items-start gap-3">
+                <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{currentPlan.name}</h2>
                 <p className="text-gray-600 dark:text-gray-400">{currentPlan.description}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEditPlan(currentPlan)}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+                      bg-blue-600 hover:bg-blue-700 text-white"
+                    title="Edit Plan"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    onClick={handleDuplicateToTomorrow}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+                      bg-purple-600 hover:bg-purple-700 text-white"
+                    title="Duplicate Today to Tomorrow"
+                  >
+                    <Copy size={16} />
+                    Duplicate Today
+                  </button>
+                </div>
               </div>
 
               <div className="mb-4 flex gap-2 items-center">
@@ -444,7 +705,161 @@ export default function WorkoutPage() {
 
                       {exercises.length > 0 ? (
                         exercises.map((exercise, index) => (
-                          <div key={index} className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                          <div key={index} className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded group">
+                            {editingExercise && 
+                              editingExercise.planId === selectedPlan && 
+                              editingExercise.date.toDateString() === date.toDateString() &&
+                              editingExercise.exerciseIndex === index ? (
+                                <div className="space-y-2">
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      defaultValue={exercise.name}
+                                      onBlur={(e) => {
+                                        const name = e.target.value;
+                                        const setsInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Sets"]');
+                                        const repsInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Reps"]');
+                                        const durationInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Duration"]');
+                                        const sets = setsInput ? setsInput.value : exercise.sets;
+                                        const reps = repsInput ? repsInput.value : exercise.reps;
+                                        const duration = durationInput ? durationInput.value : exercise.duration;
+                                        if (name.trim() && (
+                                          name !== exercise.name || 
+                                          parseInt(sets) !== exercise.sets || 
+                                          parseInt(reps) !== exercise.reps || 
+                                          parseInt(duration) !== exercise.duration
+                                        )) {
+                                          handleUpdateExercise(selectedPlan, date, index, name, sets, reps, duration);
+                                        } else {
+                                          setEditingExercise(null);
+                                        }
+                                      }}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.target.blur();
+                                        }
+                                      }}
+                                      className="flex-1 text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-600 dark:text-white"
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        setEditingExercise(null);
+                                      }}
+                                      className="px-2 py-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                      title="Cancel"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <input
+                                      type="number"
+                                      defaultValue={exercise.sets}
+                                      placeholder="Sets"
+                                      onBlur={(e) => {
+                                        const sets = e.target.value;
+                                        const nameInput = e.target.parentElement.parentElement.querySelector('input[type="text"]');
+                                        const repsInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Reps"]');
+                                        const durationInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Duration"]');
+                                        const name = nameInput ? nameInput.value : exercise.name;
+                                        const reps = repsInput ? repsInput.value : exercise.reps;
+                                        const duration = durationInput ? durationInput.value : exercise.duration;
+                                        if (name.trim() && (
+                                          name !== exercise.name || 
+                                          parseInt(sets) !== exercise.sets || 
+                                          parseInt(reps) !== exercise.reps || 
+                                          parseInt(duration) !== exercise.duration
+                                        )) {
+                                          handleUpdateExercise(selectedPlan, date, index, name, sets, reps, duration);
+                                        } else {
+                                          setEditingExercise(null);
+                                        }
+                                      }}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.target.blur();
+                                        }
+                                      }}
+                                      className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-600 dark:text-white"
+                                    />
+                                    <input
+                                      type="number"
+                                      defaultValue={exercise.reps}
+                                      placeholder="Reps"
+                                      onBlur={(e) => {
+                                        const reps = e.target.value;
+                                        const nameInput = e.target.parentElement.parentElement.querySelector('input[type="text"]');
+                                        const setsInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Sets"]');
+                                        const durationInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Duration"]');
+                                        const name = nameInput ? nameInput.value : exercise.name;
+                                        const sets = setsInput ? setsInput.value : exercise.sets;
+                                        const duration = durationInput ? durationInput.value : exercise.duration;
+                                        if (name.trim() && (
+                                          name !== exercise.name || 
+                                          parseInt(sets) !== exercise.sets || 
+                                          parseInt(reps) !== exercise.reps || 
+                                          parseInt(duration) !== exercise.duration
+                                        )) {
+                                          handleUpdateExercise(selectedPlan, date, index, name, sets, reps, duration);
+                                        } else {
+                                          setEditingExercise(null);
+                                        }
+                                      }}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.target.blur();
+                                        }
+                                      }}
+                                      className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-600 dark:text-white"
+                                    />
+                                    <input
+                                      type="number"
+                                      defaultValue={exercise.duration}
+                                      placeholder="Duration"
+                                      onBlur={(e) => {
+                                        const duration = e.target.value;
+                                        const nameInput = e.target.parentElement.parentElement.querySelector('input[type="text"]');
+                                        const setsInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Sets"]');
+                                        const repsInput = e.target.parentElement.parentElement.querySelector('input[placeholder="Reps"]');
+                                        const name = nameInput ? nameInput.value : exercise.name;
+                                        const sets = setsInput ? setsInput.value : exercise.sets;
+                                        const reps = repsInput ? repsInput.value : exercise.reps;
+                                        if (name.trim() && (
+                                          name !== exercise.name || 
+                                          parseInt(sets) !== exercise.sets || 
+                                          parseInt(reps) !== exercise.reps || 
+                                          parseInt(duration) !== exercise.duration
+                                        )) {
+                                          handleUpdateExercise(selectedPlan, date, index, name, sets, reps, duration);
+                                        } else {
+                                          setEditingExercise(null);
+                                        }
+                                      }}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.target.blur();
+                                        }
+                                      }}
+                                      className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-600 dark:text-white"
+                                    />
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm('Are you sure you want to delete this exercise?')) {
+                                          handleDeleteExercise(selectedPlan, date, index);
+                                        }
+                                      }}
+                                      className="px-2 py-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-sm"
+                                      title="Delete exercise"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
                             <div className="flex items-center gap-2 mb-1">
                               <input
                                 type="checkbox"
@@ -452,13 +867,36 @@ export default function WorkoutPage() {
                                 onChange={() => handleToggleExercise(selectedPlan, date, index, exercise.completed)}
                                 className="w-4 h-4"
                               />
-                              <span className="font-medium text-gray-900 dark:text-white">
+                                    <span 
+                                      className="font-medium text-gray-900 dark:text-white cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 flex-1"
+                                      onClick={() => setEditingExercise({
+                                        planId: selectedPlan,
+                                        date: date,
+                                        exerciseIndex: index
+                                      })}
+                                      title="Click to edit"
+                                    >
                                 {exercise.name}
                               </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm('Are you sure you want to delete this exercise?')) {
+                                          handleDeleteExercise(selectedPlan, date, index);
+                                        }
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 p-1"
+                                      title="Delete exercise"
+                                    >
+                                      <X size={14} />
+                                    </button>
                             </div>
                             <div className="ml-6 text-sm text-gray-600 dark:text-gray-400">
                               Sets: {exercise.sets} | Reps: {exercise.reps} | Duration: {exercise.duration} min
                             </div>
+                                </div>
+                              )
+                            }
                           </div>
                         ))
                       ) : (
@@ -494,7 +932,9 @@ export default function WorkoutPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Create Workout Plan</h2>
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+              {editingPlan ? 'Edit Workout Plan' : 'Create Workout Plan'}
+            </h2>
             <form onSubmit={handleCreatePlan} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -548,7 +988,16 @@ export default function WorkoutPage() {
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingPlan(null);
+                    setFormData({
+                      name: '',
+                      description: '',
+                      startDate: format(new Date(), 'yyyy-MM-dd'),
+                      endDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+                    });
+                  }}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
                 >
                   Cancel
@@ -557,7 +1006,7 @@ export default function WorkoutPage() {
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                 >
-                  Create
+                  {editingPlan ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
