@@ -952,7 +952,11 @@ Muscle Gain Plan,High protein diet for muscle building,2024-02-01,2024-02-28,250
                   );
                   
                   const meals = day?.meals || [];
-                  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'Water Intake'];
+                  const mealTypes = ['🏋️‍♂️ Breakfast (Pre-workout)' ,'💪 Breakfast (Post-workout)','🍎 Mid‑Morning', '🍛 Lunch', '🍽️ Dinner (Light)', '☕ Evening', '💧 Water Intake'];
+                  const drinkTypes = ['Water Intake'];
+                  
+
+                  // Water Intake Input
                   const waterIntake = day?.waterIntake || 0;
                   const waterIntakeInput = (
                     <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">

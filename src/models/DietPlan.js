@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { Water_Brush } from 'next/font/google';
 
 const DietDaySchema = new mongoose.Schema({
   date: {
@@ -8,7 +9,7 @@ const DietDaySchema = new mongoose.Schema({
   meals: [{
     mealType: {
       type: String,
-      enum: ['breakfast', 'lunch', 'dinner', 'snack'],
+      enum: ['🏋️‍♂️ Breakfast (Pre-workout)', '💪 Breakfast (Post-workout)', '🍎 Mid‑Morning', '🍛 Lunch', '🍽️ Dinner (Light)', '☕ Evening', '💧 Water Intake'],
       required: true,
     },
     food: {
