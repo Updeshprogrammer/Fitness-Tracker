@@ -526,6 +526,27 @@ export default function WorkoutPage() {
     displayDates = eachDayOfInterval({ start: monthStart, end: monthEnd });
   }
 
+  // Determine if today's workouts are fully completed to show a celebration message
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let showTodayCelebration = false;
+  if (currentPlan && Array.isArray(currentPlan.days)) {
+    const todayDay = currentPlan.days.find(d => {
+      const dayDate = new Date(d.date);
+      dayDate.setHours(0, 0, 0, 0);
+      return dayDate.getTime() === today.getTime();
+    });
+
+    if (todayDay) {
+      const hasExercises = Array.isArray(todayDay.exercises) && todayDay.exercises.length > 0;
+      const allExercisesCompleted =
+        hasExercises && todayDay.exercises.every(ex => ex.completed);
+
+      showTodayCelebration = todayDay.completed || allExercisesCompleted;
+    }
+  }
+
   if (loading) {
     return <div className="p-6">Loading...</div>;
   }
@@ -580,6 +601,48 @@ export default function WorkoutPage() {
        </div>
       ) : (
         <>
+          {showTodayCelebration && (
+            <div className="relative mb-4 overflow-hidden rounded-xl border border-green-500/60 bg-gradient-to-r from-green-500 via-emerald-500 to-lime-400 text-white shadow-lg">
+              {/* soft glow circles */}
+              <div className="absolute -left-10 -top-10 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+              <div className="absolute -right-10 -bottom-10 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+
+              {/* party boom confetti */}
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <span className="confetti-piece confetti-piece--1 confetti-piece--top" />
+                <span className="confetti-piece confetti-piece--2 confetti-piece--mid" />
+                <span className="confetti-piece confetti-piece--3 confetti-piece--bottom" />
+                <span className="confetti-piece confetti-piece--4 confetti-piece--top" />
+                <span className="confetti-piece confetti-piece--5 confetti-piece--mid" />
+                <span className="confetti-piece confetti-piece--6 confetti-piece--bottom" />
+                <span className="confetti-piece confetti-piece--7 confetti-piece--top" />
+                <span className="confetti-piece confetti-piece--8 confetti-piece--mid" />
+              </div>
+
+              <div className="relative z-10 flex flex-col items-start gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide">
+                    Congratulations!
+                  </p>
+                  <p className="text-sm sm:text-base opacity-90">
+                    You have completed today&apos;s workout exercises. Feel proud and enjoy the party boom moment!
+                  </p>
+                </div>
+                <div className="mt-2 flex items-center gap-2 sm:mt-0">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg font-bold animate-bounce">
+                    *
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/25 text-lg font-bold animate-bounce delay-150">
+                    *
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/30 text-lg font-bold animate-bounce delay-300">
+                    *
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <select
             value={selectedPlan}
@@ -903,22 +966,77 @@ export default function WorkoutPage() {
                         <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">No exercises</div>
                       )}
 
-                      <div className="mt-2">
-                        <input
-                          type="text"
-                          placeholder="Exercise name"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              const name = e.target.value;
-                              const sets = prompt('Sets:') || '0';
-                              const reps = prompt('Reps:') || '0';
-                              const duration = prompt('Duration (minutes):') || '0';
-                              handleAddExercise(selectedPlan, date, name, sets, reps, duration);
-                              e.target.value = '';
-                            }
-                          }}
-                          className="w-full text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-600 dark:text-white"
-                        />
+                      <div className="mt-3 space-y-2">
+                        <div
+                          className="space-y-2 rounded-md bg-gray-50/70 p-2 dark:bg-gray-800/60"
+                          data-new-exercise-container
+                        >
+                          <input
+                            type="text"
+                            placeholder="Exercise name"
+                            data-field="name"
+                            className="w-full text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/70"
+                          />
+                          <div className="mt-1 grid grid-cols-3 gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Sets"
+                              data-field="sets"
+                              className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/70"
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Reps"
+                              data-field="reps"
+                              className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/70"
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Minutes"
+                              data-field="duration"
+                              className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/70"
+                            />
+                          </div>
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                const container = e.currentTarget.closest('[data-new-exercise-container]');
+                                if (!container) return;
+
+                                const nameInput = container.querySelector('input[data-field="name"]');
+                                const setsInput = container.querySelector('input[data-field="sets"]');
+                                const repsInput = container.querySelector('input[data-field="reps"]');
+                                const durationInput = container.querySelector('input[data-field="duration"]');
+
+                                const name = nameInput?.value || '';
+                                const sets = setsInput?.value || '0';
+                                const reps = repsInput?.value || '0';
+                                const duration = durationInput?.value || '0';
+
+                                if (!name.trim()) {
+                                  toast.error('Please enter an exercise name');
+                                  nameInput?.focus();
+                                  return;
+                                }
+
+                                handleAddExercise(selectedPlan, date, name, sets, reps, duration);
+
+                                if (nameInput) nameInput.value = '';
+                                if (setsInput) setsInput.value = '';
+                                if (repsInput) repsInput.value = '';
+                                if (durationInput) durationInput.value = '';
+                              }}
+                              className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/70"
+                            >
+                              <Plus className="mr-1 h-3 w-3" />
+                              Add exercise
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
